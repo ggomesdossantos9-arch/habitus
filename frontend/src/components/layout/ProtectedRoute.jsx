@@ -1,0 +1,2 @@
+import { Navigate, Outlet, useLocation } from 'react-router-dom'; import { LoadingSpinner } from '../ui/LoadingSpinner.jsx'; import { useAuth } from '../../hooks/useAuth.js';
+export function ProtectedRoute() { const { user,isLoading }=useAuth(), location=useLocation(); if(isLoading) return <LoadingSpinner label="Preparando seu espaço"/>; return user ? <Outlet/> : <Navigate to="/login" state={{ from: location }} replace/>; }

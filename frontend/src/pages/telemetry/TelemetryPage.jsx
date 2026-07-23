@@ -1,0 +1,1 @@
+import { ComingSoon } from '../../components/ui/ComingSoon.jsx'; export function TelemetryPage(){return <ComingSoon title="Telemetria Emocional" description="Observe padrões emocionais ao longo da sua jornada."/>}

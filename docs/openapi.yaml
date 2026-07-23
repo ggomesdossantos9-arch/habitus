@@ -1,0 +1,153 @@
+openapi: 3.1.0
+info:
+  title: Habitus API
+  version: 1.0.0-phase1
+  description: Contrato executável das rotas implementadas na Fase 1. Recuperação de senha não é exposta até existir provedor de e-mail.
+servers:
+  - url: http://localhost:3000
+paths:
+  /health:
+    get:
+      summary: Liveness
+      responses: { '200': { description: API ativa } }
+  /ready:
+    get:
+      summary: Readiness com MySQL
+      responses: { '200': { description: API e banco prontos }, '503': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/csrf:
+    get:
+      summary: Emite cookie e token double-submit CSRF
+      responses:
+        '200':
+          description: Token emitido e cookie legível configurado
+          headers:
+            Set-Cookie: { schema: { type: string }, description: Cookie `habitus_csrf` com Path `/api/v1/auth` }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CsrfResponse' }
+  /api/v1/auth/register:
+    post:
+      summary: Cria usuário, consentimentos e sessão
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
+      responses: { '201': { $ref: '#/components/responses/Session' }, '400': { $ref: '#/components/responses/Problem' }, '409': { $ref: '#/components/responses/Problem' }, '422': { $ref: '#/components/responses/Problem' }, '429': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/login:
+    post:
+      summary: Autentica usuário e cria sessão
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
+      responses: { '200': { $ref: '#/components/responses/Session' }, '400': { $ref: '#/components/responses/Problem' }, '401': { $ref: '#/components/responses/Problem' }, '429': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/refresh:
+    post:
+      summary: Rotaciona refresh token
+      security: [{ refreshCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses: { '200': { $ref: '#/components/responses/Session' }, '401': { $ref: '#/components/responses/Problem' }, '403': { $ref: '#/components/responses/Problem' }, '429': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/logout:
+    post:
+      summary: Revoga a sessão atual
+      security: [{ refreshCookie: [] }]
+      parameters: [{ $ref: '#/components/parameters/Csrf' }]
+      responses: { '204': { description: Sessão encerrada }, '403': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/logout-all:
+    post:
+      summary: Revoga todas as sessões e access tokens
+      security: [{ bearerAuth: [] }]
+      responses: { '204': { description: Sessões encerradas }, '401': { $ref: '#/components/responses/Problem' } }
+  /api/v1/auth/reauthenticate:
+    post:
+      summary: Emite JWT de reautenticação por cinco minutos
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [password], properties: { password: { type: string, minLength: 1, maxLength: 72 } } } } } }
+      responses:
+        '200':
+          description: Token de reautenticação
+          content: { application/json: { schema: { $ref: '#/components/schemas/ReauthResponse' } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+  /api/v1/users/me:
+    get:
+      summary: Perfil do usuário autenticado
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Perfil sem dados internos
+          content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } }
+        '401': { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    refreshCookie: { type: apiKey, in: cookie, name: habitus_refresh, description: Em produção segura, o nome é `__Secure-habitus_refresh` }
+  parameters:
+    Csrf: { name: X-CSRF-Token, in: header, required: true, schema: { type: string }, description: Deve corresponder ao cookie habitus_csrf }
+  schemas:
+    Register:
+      type: object
+      additionalProperties: false
+      required: [name, email, password, termsVersion, privacyVersion]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 12, maxLength: 72 }
+        termsVersion: { type: string, maxLength: 30 }
+        privacyVersion: { type: string, maxLength: 30 }
+    Login:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties: { email: { type: string, format: email, maxLength: 254 }, password: { type: string, minLength: 1, maxLength: 72 } }
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, timezone, locale, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        timezone: { type: string }
+        locale: { type: string }
+        createdAt: { type: string, format: date-time }
+    SessionData:
+      type: object
+      additionalProperties: false
+      required: [accessToken, expiresAt]
+      properties:
+        user: { $ref: '#/components/schemas/User' }
+        accessToken: { type: string, description: JWT RS256 mantido somente em memória pelo cliente }
+        expiresAt: { type: string, format: date-time, description: Expiração do refresh token }
+    SessionResponse:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/SessionData' } }
+    UserResponse:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/User' } }
+    CsrfResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [csrfToken]
+          properties: { csrfToken: { type: string } }
+    ReauthResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [reauthToken, expiresIn]
+          properties: { reauthToken: { type: string }, expiresIn: { type: integer, const: 300 } }
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, requestId]
+      properties: { type: { type: string, format: uri }, title: { type: string }, status: { type: integer }, code: { type: string }, detail: { type: string }, requestId: { type: string }, errors: { type: array, items: { type: object } } }
+  responses:
+    Problem: { description: Erro em Problem Details, content: { application/problem+json: { schema: { $ref: '#/components/schemas/Problem' } } } }
+    Session:
+      description: Access token, perfil quando aplicável e cookie HttpOnly de refresh
+      headers:
+        Set-Cookie: { schema: { type: string }, description: Cookie de refresh `HttpOnly`; `Secure` em produção; Path `/api/v1/auth` }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/SessionResponse' }

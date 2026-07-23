@@ -1,0 +1,2 @@
+import { CheckCircle, WarningCircle, X } from '@phosphor-icons/react';
+export function Alert({ children, variant = 'error', onDismiss }) { const Icon = variant === 'success' ? CheckCircle : WarningCircle; return <div className={`alert alert--${variant}`} role={variant === 'error' ? 'alert' : 'status'}><Icon size={20} weight="duotone"/><span>{children}</span>{onDismiss && <button onClick={onDismiss} aria-label="Fechar aviso"><X size={16}/></button>}</div>; }

@@ -1,0 +1,1 @@
+import { ComingSoon } from '../../components/ui/ComingSoon.jsx'; export function JournalPage(){return <ComingSoon title="Diário Cognitivo" description="Registre pensamentos, situações e novas perspectivas com privacidade."/>}

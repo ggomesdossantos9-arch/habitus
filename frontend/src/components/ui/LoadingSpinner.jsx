@@ -1,0 +1,1 @@
+import { CircleNotch } from '@phosphor-icons/react'; export function LoadingSpinner({ label = 'Carregando' }) { return <div className="loading" role="status"><CircleNotch className="spin" size={28}/><span>{label}</span></div>; }

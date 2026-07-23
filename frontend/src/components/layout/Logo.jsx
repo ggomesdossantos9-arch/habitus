@@ -1,0 +1,1 @@
+import { FlowerLotus } from '@phosphor-icons/react'; export function Logo({ compact = false }) { return <div className="logo"><span className="logo__mark"><FlowerLotus weight="fill" size={25}/></span>{!compact && <strong>Habitus</strong>}</div>; }

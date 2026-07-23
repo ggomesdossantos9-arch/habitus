@@ -1,0 +1,2 @@
+import { Moon, Sun } from '@phosphor-icons/react'; import { useTheme } from '../../hooks/useTheme.js';
+export function ThemeToggle() { const { theme, toggle } = useTheme(); return <button className="theme-toggle" onClick={toggle} aria-label={`Ativar tema ${theme === 'dark' ? 'claro' : 'escuro'}`}><span className={theme === 'light' ? 'active' : ''}><Sun size={20}/></span><span className={theme === 'dark' ? 'active' : ''}><Moon size={20}/></span></button>; }

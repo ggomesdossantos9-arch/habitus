@@ -1,0 +1,1 @@
+import { ComingSoon } from '../../components/ui/ComingSoon.jsx'; export function HabitsPage(){return <ComingSoon title="Hábitos" description="Crie, organize e acompanhe hábitos que fazem sentido para você."/>}
