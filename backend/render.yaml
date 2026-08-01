@@ -6,12 +6,31 @@ services:
     plan: free
     buildCommand: npm ci
     startCommand: npm run start
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 8080
       - key: DATABASE_URL
-        fromDatabase:
-          name: habitus-mysql
-          property: connectionString
+        sync: false
+      - key: WEB_ORIGINS
+        sync: false
+      - key: JWT_PRIVATE_KEY_BASE64
+        sync: false
+      - key: JWT_PUBLIC_KEY_BASE64
+        sync: false
+      - key: TOKEN_HMAC_SECRET
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: TERMS_VERSION
+        value: "1.0"
+      - key: PRIVACY_VERSION
+        value: "1.0"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false

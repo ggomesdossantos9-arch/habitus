@@ -2,6 +2,10 @@ node_modules/
 .npm-cache/
 dist/
 .env
+backend/mysql-data/
+mysql-data/
 coverage/
 *.log
+*.pid
+*.tmp
 .DS_Store

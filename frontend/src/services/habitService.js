@@ -45,6 +45,10 @@ export const habitService = {
   async remove(habitId) {
     await api.delete(`/api/v1/habits/${habitId}`);
   },
+  async restore(habitId) {
+    const { data } = await api.post(`/api/v1/habits/${habitId}/restore`);
+    return normalizeHabit(data.data);
+  },
   async listCheckins(habitId) {
     const { data } = await api.get(`/api/v1/habits/${habitId}/checkins`);
     return data.data ?? [];
@@ -52,6 +56,9 @@ export const habitService = {
   async upsertCheckin(habitId, date, payload) {
     const { data } = await api.put(`/api/v1/habits/${habitId}/checkins/${date}`, payload);
     return data.data;
+  },
+  async deleteCheckin(habitId, date) {
+    await api.delete(`/api/v1/habits/${habitId}/checkins/${date}`);
   },
   async dailyPlan(date) {
     const { data } = await api.get('/api/v1/daily-plan', { params: date ? { date } : {} });

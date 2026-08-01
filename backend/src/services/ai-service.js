@@ -17,6 +17,17 @@ const analysisSchema = {
 };
 
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+const asArray = (value) => Array.isArray(value) ? value.filter((item) => typeof item === 'string').slice(0, 8) : [];
+function normalizeAnalysis(value) {
+  if (!value || typeof value !== 'object') throw new Problem(503, 'AI_PROVIDER_INVALID_JSON', 'A IA retornou uma resposta invalida.');
+  return {
+    resumo: typeof value.resumo === 'string' && value.resumo.trim() ? value.resumo.trim() : 'Analise gerada sem resumo textual.',
+    padroesEmocionais: asArray(value.padroesEmocionais),
+    pensamentosRecorrentes: asArray(value.pensamentosRecorrentes),
+    sugestoes: asArray(value.sugestoes),
+    safetyLevel: ['normal', 'sensitive', 'crisis'].includes(value.safetyLevel) ? value.safetyLevel : 'normal',
+  };
+}
 
 export class AiService {
   constructor({ db, env, userService, journalService, habitService }) {
@@ -25,37 +36,49 @@ export class AiService {
 
   async callGroq(sourceText, context) {
     if (!this.env.GROQ_API_KEY) throw new Problem(503, 'AI_PROVIDER_UNCONFIGURED', 'Configure GROQ_API_KEY para usar IA.');
-    const response = await fetch(`${this.env.GROQ_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.env.GROQ_MODEL,
-        temperature: 0.2,
-        max_completion_tokens: 900,
-        reasoning_effort: 'low',
-        messages: [
-          {
-            role: 'system',
-            content: 'Voce analisa diarios cognitivos e dados de habitos em pt-BR. Nao faca diagnosticos clinicos. Responda somente JSON conforme o schema.',
+    let response;
+    try {
+      response = await fetch(`${this.env.GROQ_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.env.GROQ_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.env.GROQ_MODEL,
+          temperature: 0.2,
+          max_completion_tokens: 900,
+          reasoning_effort: 'low',
+          messages: [
+            {
+              role: 'system',
+              content: 'Voce analisa diarios cognitivos e dados de habitos em pt-BR. Nao faca diagnosticos clinicos. Responda somente JSON conforme o schema.',
+            },
+            {
+              role: 'user',
+              content: `Contexto: ${context}\n\nDados do usuario:\n${sourceText}`,
+            },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'habitus_analysis', strict: true, schema: analysisSchema },
           },
-          {
-            role: 'user',
-            content: `Contexto: ${context}\n\nDados do usuario:\n${sourceText}`,
-          },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: { name: 'habitus_analysis', strict: true, schema: analysisSchema },
-        },
-      }),
-    });
+        }),
+      });
+    } catch {
+      throw new Problem(503, 'AI_PROVIDER_UNAVAILABLE', 'Servico de IA temporariamente indisponivel.');
+    }
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Problem(503, 'AI_PROVIDER_FAILED', payload?.error?.message ?? 'Falha temporaria ao chamar a IA.');
+      const code = response.status === 429 ? 'AI_RATE_LIMITED' : 'AI_PROVIDER_FAILED';
+      const detail = response.status === 429 ? 'Limite de requisicoes da IA atingido. Tente novamente mais tarde.' : payload?.error?.message ?? 'Falha temporaria ao chamar a IA.';
+      throw new Problem(response.status === 429 ? 429 : 503, code, detail);
     }
     const content = payload.choices?.[0]?.message?.content;
     if (!content) throw new Problem(503, 'AI_PROVIDER_EMPTY', 'A IA nao retornou conteudo.');
-    return { content: JSON.parse(content), usage: payload.usage ?? {} };
+    try {
+      return { content: normalizeAnalysis(JSON.parse(content)), usage: payload.usage ?? {} };
+    } catch (error) {
+      if (error instanceof Problem) throw error;
+      throw new Problem(503, 'AI_PROVIDER_INVALID_JSON', 'A IA retornou uma resposta invalida.');
+    }
   }
 
   async buildSource(user, input) {
