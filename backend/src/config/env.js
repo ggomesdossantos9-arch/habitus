@@ -17,6 +17,9 @@ const schema = z.object({
   COOKIE_SECURE: z.enum(['true', 'false']).default('true').transform((v) => v === 'true'),
   COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
   TRUST_PROXY: z.coerce.number().int().min(0).default(1),
+  GROQ_API_KEY: z.string().default(''),
+  GROQ_BASE_URL: z.string().default('https://api.groq.com/openai/v1'),
+  GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
   TERMS_VERSION: z.string().min(1),
   PRIVACY_VERSION: z.string().min(1),
 }).superRefine((value, context) => {

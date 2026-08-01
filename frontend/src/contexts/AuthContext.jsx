@@ -9,13 +9,8 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const restore = useCallback(async () => {
     try {
-      // In development, shortcut to a local dev user when backend is unavailable
-      if (import.meta.env.MODE === 'development') {
-        setUser({ id: 'dev-user', public_id: 'dev-user', name: 'Guilherme', email: 'ggomesdossantos9@gmail.com' });
-        setIsLoading(false);
-        return;
-      }
-      await refreshSession(); setUser(await authService.me());
+      await refreshSession();
+      setUser(await authService.me());
     }
     catch { setUser(null); }
     finally { setIsLoading(false); }

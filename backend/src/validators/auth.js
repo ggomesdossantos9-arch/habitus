@@ -8,13 +8,13 @@ export const registerSchema = z.object({ name: z.string().trim().min(2).max(120)
 export const loginSchema = z.object({ email, password: currentPassword }).strict();
 export const reauthenticateSchema = z.object({ password: currentPassword }).strict();
 
-export function validate(schema) {
+export function validate(schema, source = 'body', target = 'validated') {
   return (req, _res, next) => {
-    const parsed = schema.safeParse(req.body);
+    const parsed = schema.safeParse(req[source]);
     if (!parsed.success) {
       const error = new Error('Revise os campos informados.'); error.status = 400; error.code = 'VALIDATION_ERROR';
       error.errors = parsed.error.issues.map((i) => ({ field: i.path.join('.'), code: i.code, message: i.message })); return next(error);
     }
-    req.validated = parsed.data; next();
+    req[target] = parsed.data; next();
   };
 }
