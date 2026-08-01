@@ -114,7 +114,8 @@ CREATE TABLE emotional_events (
 CREATE TABLE emotional_event_items (
  event_id BIGINT UNSIGNED NOT NULL, emotion_id BIGINT UNSIGNED NOT NULL, intensity TINYINT UNSIGNED NOT NULL,
  resulting_intensity TINYINT UNSIGNED, is_primary BOOLEAN NOT NULL DEFAULT FALSE,
- PRIMARY KEY(event_id,emotion_id),
+ primary_event_id BIGINT UNSIGNED GENERATED ALWAYS AS (CASE WHEN is_primary THEN event_id ELSE NULL END) STORED,
+ PRIMARY KEY(event_id,emotion_id), UNIQUE KEY uq_event_primary(primary_event_id),
  CONSTRAINT fk_item_event FOREIGN KEY(event_id) REFERENCES emotional_events(id) ON DELETE CASCADE,
  CONSTRAINT fk_item_emotion FOREIGN KEY(emotion_id) REFERENCES emotions(id) ON DELETE RESTRICT,
  CONSTRAINT ck_item_intensity CHECK(intensity BETWEEN 1 AND 5),
