@@ -3,7 +3,12 @@ import { z } from 'zod';
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.string().default(''),
+  MYSQLHOST: z.string().default(''),
+  MYSQLPORT: z.coerce.number().int().positive().optional(),
+  MYSQLUSER: z.string().default(''),
+  MYSQLPASSWORD: z.string().default(''),
+  MYSQLDATABASE: z.string().default(''),
   WEB_ORIGINS: z.string().default('http://localhost:5173'),
   JWT_ISSUER: z.string().default('habitus-api'),
   JWT_AUDIENCE: z.string().default('habitus-web'),
@@ -23,6 +28,7 @@ const schema = z.object({
   TERMS_VERSION: z.string().min(1),
   PRIVACY_VERSION: z.string().min(1),
 }).superRefine((value, context) => {
+  if (!value.DATABASE_URL && !(value.MYSQLHOST && value.MYSQLUSER && value.MYSQLDATABASE)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['DATABASE_URL'], message: 'DATABASE_URL ou variaveis MYSQL* devem ser informadas' });
   if (value.COOKIE_SAME_SITE === 'none' && !value.COOKIE_SECURE) context.addIssue({ code: z.ZodIssueCode.custom, path: ['COOKIE_SECURE'], message: 'deve ser true quando COOKIE_SAME_SITE=none' });
 });
 

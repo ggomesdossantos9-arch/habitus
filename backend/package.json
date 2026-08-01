@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "start": "npm run db:migrate && npm run start:api",
+    "start:api": "node src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "keys:generate": "node scripts/generate-keys.js",
