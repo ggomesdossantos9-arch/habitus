@@ -18,28 +18,48 @@ function normalizeHabit(payload) {
   };
 }
 
+function normalizeHabitPayload(values) {
+  const daysOfWeek = [...new Set((values.daysOfWeek ?? []).map(Number))]
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 7)
+    .sort((a, b) => a - b);
+  const targetValue = Number(values.meta ?? values.schedule?.targetValue ?? 1);
+  const schedule = {
+    frequencyType: daysOfWeek.length ? 'specific_weekdays' : 'daily',
+    weekdays: daysOfWeek,
+    weeklyTarget: null,
+    targetValue: Number.isFinite(targetValue) && targetValue > 0 ? targetValue : 1,
+    unit: values.schedule?.unit ?? null,
+  };
+  const effectiveFrom = values.startDate ?? values.schedule?.effectiveFrom ?? null;
+  if (effectiveFrom) schedule.effectiveFrom = effectiveFrom;
+
+  const body = {
+    name: values.name,
+    description: values.description ?? null,
+    category: values.category ?? null,
+    color: values.color ?? '#4f46e5',
+    icon: values.icon ?? 'check-circle',
+    reminderTime: values.reminderTime ?? null,
+    meta: schedule.targetValue,
+    daysOfWeek,
+    schedule,
+  };
+  if (values.startDate) body.startDate = values.startDate;
+  return body;
+}
+
 export const habitService = {
   async list() {
     const { data } = await api.get('/api/v1/habits');
     return (data.data ?? []).map(normalizeHabit);
   },
   async create(values) {
-    const body = {
-      name: values.name,
-      description: values.description ?? null,
-      category: values.category ?? null,
-      color: values.color ?? '#4f46e5',
-      icon: values.icon ?? 'check-circle',
-      reminderTime: values.reminderTime ?? null,
-      startDate: values.startDate ?? null,
-      meta: values.meta ?? 1,
-      daysOfWeek: values.daysOfWeek ?? [],
-    };
+    const body = normalizeHabitPayload(values);
     const { data } = await api.post('/api/v1/habits', body);
     return normalizeHabit(data.data);
   },
   async update(habitId, values) {
-    const { data } = await api.patch(`/api/v1/habits/${habitId}`, values);
+    const { data } = await api.patch(`/api/v1/habits/${habitId}`, normalizeHabitPayload(values));
     return normalizeHabit(data.data);
   },
   async remove(habitId) {
@@ -49,8 +69,8 @@ export const habitService = {
     const { data } = await api.post(`/api/v1/habits/${habitId}/restore`);
     return normalizeHabit(data.data);
   },
-  async listCheckins(habitId) {
-    const { data } = await api.get(`/api/v1/habits/${habitId}/checkins`);
+  async listCheckins(habitId, params = {}) {
+    const { data } = await api.get(`/api/v1/habits/${habitId}/checkins`, { params });
     return data.data ?? [];
   },
   async upsertCheckin(habitId, date, payload) {

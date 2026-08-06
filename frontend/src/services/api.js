@@ -9,7 +9,8 @@ let csrfPromise = null;
 
 export function getProblemMessage(error) {
   const body = error?.response?.data;
-  return body?.detail || body?.message || body?.title || (error?.code === 'ECONNABORTED' ? 'A solicitação demorou demais. Tente novamente.' : 'Não foi possível concluir. Tente novamente.');
+  const fieldErrors = Array.isArray(body?.errors) ? body.errors.map((item) => item.message || item.field).filter(Boolean).join(' ') : '';
+  return fieldErrors || body?.detail || body?.message || body?.title || (error?.code === 'ECONNABORTED' ? 'A solicitacao demorou demais. Tente novamente.' : 'Nao foi possivel concluir. Tente novamente.');
 }
 
 export async function getCsrfToken() {
